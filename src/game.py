@@ -269,6 +269,8 @@ class GUISnakeGame(SnakeGame):
             if event.type == pygame.QUIT:
                 self.stop_running()
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    self.stop_running()
                 if not self.is_alive():
                     # start the run
                     if event.key == pygame.K_SPACE:

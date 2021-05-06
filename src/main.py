@@ -48,7 +48,7 @@ def main():
 
         def choose_next_move(self, state):
             grid, score, alive, head = state
-            print("Choosing next move")
+            # print("Choosing next move")
 
             if not self.best_path:
                 self.best_path = astar(state, interactive)
@@ -81,6 +81,20 @@ def main():
 
             return next_move
 
+    def h_cost(current, end, grid):
+        res = abs(current.position[0] - end.position[0]) + abs(
+                            current.position[1] - end.position[1])
+
+        # print(f"grid ({len(grid)},{len(grid[0])})")
+        # print(f"current : ({current.position[0]},{current.position[1]})")
+        dist_to_border_x = min(current.position[1], len(grid[0]) - current.position[1])
+        dist_to_border_y = min(current.position[0], len(grid) - current.position[0])
+        # print(f"dist to border x : {dist_to_border_x}")
+        # print(f"dist to border y : {dist_to_border_y}")
+        res += dist_to_border_x*10 + dist_to_border_y*10
+        return res
+
+
     def astar(state, interactive=False):
         print("Starting A* search")
         grid, score, alive, head = state
@@ -92,7 +106,7 @@ def main():
 
         while open_list:
             current_node = heapq.heappop(open_list)
-            print("Current Node: ", current_node)
+            # print("Current Node: ", current_node)
             closed_list.append(current_node)
 
             if interactive:
@@ -158,8 +172,7 @@ def main():
                 else:
                     # Create the f, g, and h values
                     child.g = current_node.g + 1
-                    child.h = abs(child.position[0] - food_node.position[0]) + abs(
-                            child.position[1] - food_node.position[1])
+                    child.h = h_cost(child, food_node, grid)
                     child.f = child.g + child.h
                     child.parent = current_node
 
