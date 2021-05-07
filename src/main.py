@@ -9,14 +9,29 @@ WALL_CHAR = '#'
 FOOD_CHAR = '@'
 
 parser = argparse.ArgumentParser(description="A* For Snake")
-group_solution = parser.add_mutually_exclusive_group(required=False)
-group_solution.add_argument('-i', "--interactive", action='store_true', help="Returns solution as a vector instead of the sum")
+group_interactive = parser.add_mutually_exclusive_group(required=False)
+group_interactive.add_argument('-i', "--interactive", action='store_true', help="Shows in a colorful way what the "
+                                                                                "algorithm is computing (only useful "
+                                                                                "for A* "
+                                                                                "and variants)")
+group_algorithm = parser.add_mutually_exclusive_group(required=True)
+group_algorithm.add_argument('-s', "--sshaped", action='store_true', help="S-Shaped algorithm: browses the whole "
+                                                                          "grid each time in an 'S' shape. Only "
+                                                                          "works if height of grid is even.")
+group_algorithm.add_argument('-a', "--astar", action='store_true', help="A* algorithm: classical A* algorithm, with "
+                                                                        "Manhattan distance as heuristic")
+group_algorithm.add_argument('-w', "--weighted", action='store_true', help="Weighted A* algorithm: A* algorithm where "
+                                                                           "the H value is weighted by a factor of 5")
+group_algorithm.add_argument('-n', "--inverse", action='store_true', help="Inverse A* algorithm: A* algorithm where "
+                                                                          "the H value is 1000-H")
+
 args = parser.parse_args()
 
 if args.interactive:
     interactive = True
 else:
     interactive = False
+
 
 def main():
     class Node:
@@ -29,7 +44,7 @@ def main():
             self.f = self.g + self.h
 
         def __repr__(self):
-            return f'Node f value: {self.f}'
+            return f'({self.position[0]}, {self.position[1]})'
 
         def __lt__(self, other):
             return self.f < other.f
@@ -45,16 +60,21 @@ def main():
             self.moves = [RIGHT, DOWN, LEFT, UP]
             self.i = 0
             self.best_path = None
+            self.first = True
 
         def choose_next_move(self, state):
             grid, score, alive, head = state
-            print("Choosing next move")
+            # print("Choosing next move")
 
             if not self.best_path:
-                self.best_path = astar(state, interactive)
+                if args.astar:
+                    self.best_path = self.astar(state, interactive)
+                elif args.sshaped:
+                    self.best_path = self.sshape(state)
 
             if self.best_path == 171:
-                next_move = self.moves[1]
+                print("A Star marche pas")
+                return self.moves[1]
 
             next_node = self.best_path.pop()
             next_pos = next_node.position
@@ -62,8 +82,8 @@ def main():
             next_mov_bool = []
 
             for i in range(len(next_pos)):
-                next_mov_bool.append(next_pos[i]-head[i])
-            #print(next_mov_bool)
+                next_mov_bool.append(next_pos[i] - head[i])
+            # print(next_mov_bool)
 
             if next_mov_bool[0] == 0:
                 if next_mov_bool[1] == 1:
@@ -77,103 +97,149 @@ def main():
             elif next_mov_bool[0] == -1:
                 next_move = self.moves[3]
             else:
-                print("Problem in moves, head: ",head,", next_pos: ",next_pos)
+                print("Problem in moves, head: ", head, ", next_pos: ", next_pos)
 
             return next_move
 
-    def astar(state, interactive=False):
-        print("Starting A* search")
-        grid, score, alive, head = state
-        closed_list = []
-        open_list = []
-        head_node = Node(head, None)
-        food_node = Node(game.food, None)
-        heapq.heappush(open_list, head_node)
+        def h_cost(self, current, end, grid):
+            res = abs(current.position[0] - end.position[0]) + abs(
+                current.position[1] - end.position[1])
 
-        while open_list:
-            current_node = heapq.heappop(open_list)
-            print("Current Node: ", current_node)
-            closed_list.append(current_node)
+            # print(f"grid ({len(grid)},{len(grid[0])})")
+            # print(f"current : ({current.position[0]},{current.position[1]})")
+            # dist_to_border_x = min(current.position[1], len(grid[0]) - current.position[1])
+            # dist_to_border_y = min(current.position[0], len(grid) - current.position[0])
+            # print(f"dist to border x : {dist_to_border_x}")
+            # print(f"dist to border y : {dist_to_border_y}")
+            # res += dist_to_border_x*10 + dist_to_border_y*10
+            return res
 
-            if interactive:
-                game.grid[current_node.position[0]][current_node.position[1]] = 'C'
-                game.draw()
+        def astar(self, state, interactive=False):
+            print("Starting A* search")
+            grid, score, alive, head = state
+            closed_list = []
+            open_list = []
+            head_node = Node(head, None)
+            food_node = Node(game.food, None)
+            heapq.heappush(open_list, head_node)
 
-            if current_node.position == food_node.position:
-                path = []
-                while current_node.parent is not None:
-                    path.append(current_node)
-                    current_node = current_node.parent
+            while open_list:
+                current_node = heapq.heappop(open_list)
+                # print("Current Node: ", current_node)
+                closed_list.append(current_node)
 
                 if interactive:
-                    for el in path:
-                        print(el.position)
-                        game.grid[el.position[0]][el.position[1]] = 'A'
-                        time.sleep(0.1)
-                        game.draw()
-                    for el in path:
-                        print(el.position)
-                        game.grid[el.position[0]][el.position[1]] = ' '
-                    for el in open_list:
-                        game.grid[el.position[0]][el.position[1]] = ' '
-                    for el in closed_list:
-                        game.grid[el.position[0]][el.position[1]] = ' '
-                    game.grid[food_node.position[0]][food_node.position[1]] = FOOD_CHAR
-                    game.grid[head_node.position[0]][head_node.position[1]] = SNAKE_CHAR
+                    game.grid[current_node.position[0]][current_node.position[1]] = 'C'
                     game.draw()
-                return path
 
-            children = []
-            for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-                node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-                # Make sure within range
-                if node_position[0] > (len(grid) - 1) or node_position[0] < 0 or node_position[1] > (
-                        len(grid[len(grid) - 1]) - 1) or node_position[1] < 0:
-                    continue
-
-                # Make sure walkable terrain
-                if grid[node_position[0]][node_position[1]] == SNAKE_CHAR or \
-                        grid[node_position[0]][node_position[1]] == WALL_CHAR:
-                    continue
-
-                # Create new node
-                new_node = Node(node_position, current_node)
-
-                # Append
-                children.append(new_node)
-
-            # Loop through children
-            for child in children:
-
-                # Child is on the closed list
-                if child in closed_list:
-                    continue
-
-                if child in open_list:
-                    if child.g > current_node.g + 1:
-                        child.g = current_node.g + 1
-                        child.parent = current_node
-
-                else:
-                    # Create the f, g, and h values
-                    child.g = current_node.g + 1
-                    child.h = abs(child.position[0] - food_node.position[0]) + abs(
-                            child.position[1] - food_node.position[1])
-                    child.f = child.g + child.h
-                    child.parent = current_node
-
-                    # Add the child to the open list
-                    heapq.heappush(open_list, child)
+                if current_node.position == food_node.position:
+                    path = []
+                    while current_node.parent is not None:
+                        path.append(current_node)
+                        current_node = current_node.parent
 
                     if interactive:
-                        if game.grid[child.position[0]][child.position[1]] == '+':
-                            pass
-                        else:
-                            game.grid[child.position[0]][child.position[1]] = 'S'
+                        for el in path:
+                            print(el.position)
+                            game.grid[el.position[0]][el.position[1]] = 'A'
+                            time.sleep(0.1)
+                            game.draw()
+                        for el in path:
+                            print(el.position)
+                            game.grid[el.position[0]][el.position[1]] = ' '
+                        for el in open_list:
+                            game.grid[el.position[0]][el.position[1]] = ' '
+                        for el in closed_list:
+                            game.grid[el.position[0]][el.position[1]] = ' '
+                        game.grid[food_node.position[0]][food_node.position[1]] = FOOD_CHAR
+                        game.grid[head_node.position[0]][head_node.position[1]] = SNAKE_CHAR
                         game.draw()
+                    return path
 
-        return 171
+                children = []
+                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                    node_position = (
+                        current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+
+                    # Make sure within range
+                    if node_position[0] > (len(grid) - 1) or node_position[0] < 0 or node_position[1] > (
+                            len(grid[len(grid) - 1]) - 1) or node_position[1] < 0:
+                        continue
+
+                    # Make sure walkable terrain
+                    if grid[node_position[0]][node_position[1]] == SNAKE_CHAR or \
+                            grid[node_position[0]][node_position[1]] == WALL_CHAR:
+                        continue
+
+                    # Create new node
+                    new_node = Node(node_position, current_node)
+
+                    # Append
+                    children.append(new_node)
+
+                # Loop through children
+                for child in children:
+
+                    # Child is on the closed list
+                    if child in closed_list:
+                        continue
+
+                    if child in open_list:
+                        if child.g > current_node.g + 1:
+                            child.g = current_node.g + 1
+                            child.parent = current_node
+
+                    else:
+                        # Create the f, g, and h values
+                        child.g = current_node.g + 1
+                        child.h = self.h_cost(child, food_node, grid)
+                        child.f = 100000 - (child.g + child.h)
+                        child.parent = current_node
+
+                        # Add the child to the open list
+                        heapq.heappush(open_list, child)
+
+                        if interactive:
+                            if game.grid[child.position[0]][child.position[1]] == '+':
+                                pass
+                            else:
+                                game.grid[child.position[0]][child.position[1]] = 'S'
+                            game.draw()
+
+            print("ON SAIT PAS")
+            return 171
+
+        def sshape(self, state):
+            grid, score, alive, head = state
+            path = []
+            if score == 0:
+                print("Score 0")
+                if head[0] == 0 and self.first:
+                    path.append(Node((head[0] + 1, head[1]), None))
+                    self.first = False
+                    return path
+
+                else:
+                    self.first = False
+
+                for i in range(head[1] + 1, len(grid[1])):
+                    path.append(Node((head[0], i), None))
+
+                for i in range(1, head[0] + 1):
+                    path.append(Node((head[0] - i, head[1]), None))
+
+            for i in range(len(grid)):
+                if i % 2 == 1:
+                    for j in range(len(grid[0]) - 1):
+                        path.append(Node((i, j), None))
+                else:
+                    for j in range(len(grid[0]) - 2, -1, -1):
+                        path.append(Node((i, j), None))
+
+            for i in range(len(grid)):
+                path.append(Node((len(grid) - i - 1, len(grid[0]) - 1), None))
+
+            return path[::-1]
 
     agent = IAExample()  # None for interactive GUI
     game = GUISnakeGame()
@@ -184,12 +250,12 @@ def main():
 
     game.cleanup_pygame()
 
-    #game = TrainingSnakeGame(agent)
-    #game.start_run()
+    # game = TrainingSnakeGame(agent)
+    # game.start_run()
 
-    #while game.is_alive():
+    # while game.is_alive():
     #    game.next_tick()
 
 
-#if __name__ == '__main__':
+# if __name__ == '__main__':
 main()
