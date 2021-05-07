@@ -21,9 +21,9 @@ group_algorithm.add_argument('-s', "--sshaped", action='store_true', help="S-Sha
 group_algorithm.add_argument('-a', "--astar", action='store_true', help="A* algorithm: classical A* algorithm, with "
                                                                         "Manhattan distance as heuristic")
 group_algorithm.add_argument('-w', "--weighted", action='store_true', help="Weighted A* algorithm: A* algorithm where "
-                                                                           "the H value is weighted by a factor of 5")
+                                                                           "the H value is weighted by a factor of 10")
 group_algorithm.add_argument('-n', "--inverse", action='store_true', help="Inverse A* algorithm: A* algorithm where "
-                                                                          "the H value is 1000-H")
+                                                                          "the F value is 1000-F")
 
 args = parser.parse_args()
 
@@ -68,7 +68,11 @@ def main():
 
             if not self.best_path:
                 if args.astar:
-                    self.best_path = self.astar(state, interactive)
+                    self.best_path = self.astar(state, mode='default', interactive=interactive)
+                elif args.weighted:
+                    self.best_path = self.astar(state, mode='weighted', interactive=interactive)
+                elif args.inverse:
+                    self.best_path = self.astar(state, mode='inverse', interactive=interactive)
                 elif args.sshaped:
                     self.best_path = self.sshape(state)
 
@@ -114,7 +118,7 @@ def main():
             # res += dist_to_border_x*10 + dist_to_border_y*10
             return res
 
-        def astar(self, state, interactive=False):
+        def astar(self, state, mode='default', interactive=False):
             print("Starting A* search")
             grid, score, alive, head = state
             closed_list = []
@@ -191,9 +195,21 @@ def main():
 
                     else:
                         # Create the f, g, and h values
-                        child.g = current_node.g + 1
-                        child.h = self.h_cost(child, food_node, grid)
-                        child.f = 100000 - (child.g + child.h)
+                        if mode == 'default':
+                            child.g = current_node.g + 1
+                            child.h = self.h_cost(child, food_node, grid)
+                            child.f = child.g + child.h
+
+                        elif mode == 'weighted':
+                            child.g = current_node.g + 1
+                            child.h = 10*(self.h_cost(child, food_node, grid))
+                            child.f = child.g + child.h
+
+                        elif mode == 'inverse':
+                            child.g = current_node.g + 1
+                            child.h = self.h_cost(child, food_node, grid)
+                            child.f = 100000 - (child.g + child.h)
+
                         child.parent = current_node
 
                         # Add the child to the open list
