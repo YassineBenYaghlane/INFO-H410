@@ -291,7 +291,7 @@ def main():
         game.start_run()
 
         count = 0
-        while game.is_alive() and game.score < 200:
+        while game.is_alive() and game.score < 100:
             out_file.write(str(count)+','+str(game.score)+'\n')
             game.next_tick()
             count += 1
