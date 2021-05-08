@@ -95,7 +95,7 @@ def main():
                     self.best_path = self.sshape(state)
 
             if self.best_path == 171:
-                print("A Star marche pas")
+                print('A* did not find any path')
                 return self.moves[1]
 
             next_node = self.best_path.pop()
@@ -105,7 +105,6 @@ def main():
 
             for i in range(len(next_pos)):
                 next_mov_bool.append(next_pos[i] - head[i])
-            # print(next_mov_bool)
 
             if next_mov_bool[0] == 0:
                 if next_mov_bool[1] == 1:
@@ -137,7 +136,6 @@ def main():
             return res
 
         def astar(self, state, mode='default', interactive=False):
-            print("Starting A* search")
             grid, score, alive, head = state
             closed_list = []
             open_list = []
@@ -147,7 +145,6 @@ def main():
 
             while open_list:
                 current_node = heapq.heappop(open_list)
-                # print("Current Node: ", current_node)
                 closed_list.append(current_node)
 
                 if interactive:
@@ -162,12 +159,10 @@ def main():
 
                     if interactive:
                         for el in path:
-                            print(el.position)
                             game.grid[el.position[0]][el.position[1]] = 'A'
                             time.sleep(0.07)
                             game.draw()
                         for el in path:
-                            print(el.position)
                             game.grid[el.position[0]][el.position[1]] = ' '
                         for el in open_list:
                             game.grid[el.position[0]][el.position[1]] = ' '
@@ -240,14 +235,12 @@ def main():
                                 game.grid[child.position[0]][child.position[1]] = 'S'
                             game.draw()
 
-            print("ON SAIT PAS")
             return 171
 
         def sshape(self, state):
             grid, score, alive, head = state
             path = []
             if score == 0:
-                print("Score 0")
                 if head[0] == 0 and self.first:
                     path.append(Node((head[0] + 1, head[1]), None))
                     self.first = False
