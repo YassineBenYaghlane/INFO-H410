@@ -410,7 +410,7 @@ class TrainingSnakeGame(SnakeGame):
 
     def next_tick(self):
         if self.is_alive():
-            print("Snake is alive, state: ", self.get_state())
+            #print("Snake is alive, state: ", self.get_state())
             self.set_next_move(self.learning_agent.choose_next_move(self.get_state()))
             return self.move_snake()
 

@@ -281,11 +281,19 @@ def main():
     ######################
 
     if args.training:
+        out_file = open(args.output.split()[-1], 'w')
+        out_file.write('count,score\n')
         game = TrainingSnakeGame(agent)
         game.start_run()
 
+        count = 0
         while game.is_alive():
+            out_file.write(str(count)+','+str(game.score)+'\n')
             game.next_tick()
+            count += 1
+
+        out_file.flush()
+        out_file.close()
 
     ### FOR GAMING : ###
     #####################
