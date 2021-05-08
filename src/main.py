@@ -16,8 +16,8 @@ group_play.add_argument('-x', "--ai", action='store_true', help="AI mode: the AI
                                                                 "algorithm argument)")
 group_play.add_argument('-t', "--training", action='store_true', help="Training mode: the AI controls the game and a "
                                                                       "file is written to keep track of the scores ("
-                                                                      "requires an algorithm argument)")
-
+                                                                      "requires an algorithm argument and an output "
+                                                                      "file)")
 group_algorithm = parser.add_mutually_exclusive_group(required=False)
 group_algorithm.add_argument('-s', "--sshaped", action='store_true', help="S-Shaped algorithm: browses the whole "
                                                                           "grid each time in an 'S' shape. Only "
@@ -28,17 +28,22 @@ group_algorithm.add_argument('-w', "--weighted", action='store_true', help="Weig
                                                                            "the H value is weighted by a factor of 10")
 group_algorithm.add_argument('-n', "--inverse", action='store_true', help="Inverse A* algorithm: A* algorithm where "
                                                                           "the F value is 1000-F")
-
 group_interactive = parser.add_mutually_exclusive_group(required=False)
 group_interactive.add_argument('-i', "--interactive", action='store_true', help="Shows in a colorful way what the "
                                                                                 "algorithm is computing (only useful "
                                                                                 "for A* "
                                                                                 "and variants)")
+parser.add_argument('-o', "--output", type=str, help="To specify the file to write the results of the training in. If "
+                                                     "specified in another mode, no file will be created")
+
 args = parser.parse_args()
 
 if (args.ai or args.training) and not (not args.sshaped or not args.astar or
                                        not args.weighted or not args.inverse):
     parser.error("AI or Training mode must be precised an algorithm.")
+
+if args.training and not args.output:
+    parser.error("An output filename must be specified in training mode.")
 
 if args.interactive:
     interactive = True
@@ -215,7 +220,7 @@ def main():
 
                         elif mode == 'weighted':
                             child.g = current_node.g + 1
-                            child.h = 10*(self.h_cost(child, food_node, grid))
+                            child.h = 10 * (self.h_cost(child, food_node, grid))
                             child.f = child.g + child.h
 
                         elif mode == 'inverse':
@@ -270,8 +275,7 @@ def main():
 
             return path[::-1]
 
-
-    agent = IAExample() if (args.ai or args.training) else None # None for interactive GUI
+    agent = IAExample() if (args.ai or args.training) else None  # None for interactive GUI
 
     ### FOR TRAINING : ###
     ######################

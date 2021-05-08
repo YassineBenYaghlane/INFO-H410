@@ -404,12 +404,11 @@ class GUISnakeGame(SnakeGame):
 
 
 class TrainingSnakeGame(SnakeGame):
-    def __init__(self, learning_agent=None):
+    def __init__(self, learning_agent):
         super(TrainingSnakeGame, self).__init__()
         self.learning_agent = learning_agent
 
-    def next_tick(self, learning_agent):
-        self.learning_agent = learning_agent
+    def next_tick(self):
         if self.is_alive():
             print("Snake is alive, state: ", self.get_state())
             self.set_next_move(self.learning_agent.choose_next_move(self.get_state()))
