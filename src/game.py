@@ -10,7 +10,7 @@ YELLOW = (200, 200, 50)
 RED = (200, 50, 50)
 GREEN = (0, 200, 50)
 PURPLE = (200, 0, 150)
-ORANGE = (255,130,0)
+ORANGE = (255, 130, 0)
 RIGHT = (0, 1)
 DOWN = (1, 0)
 LEFT = (0, -1)
@@ -169,7 +169,7 @@ class SnakeGame:
         self.spawn_food()
         self.start_time = time.time()
         self.current_time = self.start_time
-        print("Starting game with C=%i and R=%i"%(self.columns,self.rows))
+        print("Starting game with C=%i and R=%i" % (self.columns, self.rows))
 
     def set_next_move(self, move):
         self.next_move = move
@@ -388,7 +388,7 @@ class GUISnakeGame(SnakeGame):
 
         timer = self.normal_font.render('Timer: ' + str(round(self.current_time - self.start_time, 1)), True, WHITE)
         self.screen.blit(title, (
-        menu_start + (width - menu_start) / 2 - title.get_width() / 2, height * (1 / 15) - title.get_height() / 2))
+            menu_start + (width - menu_start) / 2 - title.get_width() / 2, height * (1 / 15) - title.get_height() / 2))
         self.screen.blit(score, (menu_start + (width - menu_start) / 7, height * (3 / 15) - score.get_height() / 2))
         self.screen.blit(highscore,
                          (menu_start + (width - menu_start) / 7, height * (4 / 15) - highscore.get_height() / 2))
@@ -397,24 +397,25 @@ class GUISnakeGame(SnakeGame):
 
         if not self.alive:
             self.screen.blit(start, (
-            menu_start + (width - menu_start) / 2 - start.get_width() / 2, height / 2 - start.get_height() / 2))
+                menu_start + (width - menu_start) / 2 - start.get_width() / 2, height / 2 - start.get_height() / 2))
 
         self.screen.blit(timer, (menu_start + (width - menu_start) / 7, height - timer.get_height()))
         pygame.display.flip()
 
 
-# class TrainingSnakeGame(SnakeGame):
-#     def __init__(self, learning_agent):
-#         super(TrainingSnakeGame, self).__init__()
-#         self.learning_agent = None # learning_agent
-#
-#     def next_tick(self):
-#         if self.is_alive():
-#             print("Snake is alive, state: ",self.get_state())
-#             self.set_next_move(self.learning_agent.choose_next_move(self.get_state()))
-#             return self.move_snake()
-#
-#         return self.get_state()
+class TrainingSnakeGame(SnakeGame):
+    def __init__(self, learning_agent=None):
+        super(TrainingSnakeGame, self).__init__()
+        self.learning_agent = learning_agent
+
+    def next_tick(self, learning_agent):
+        self.learning_agent = learning_agent
+        if self.is_alive():
+            print("Snake is alive, state: ", self.get_state())
+            self.set_next_move(self.learning_agent.choose_next_move(self.get_state()))
+            return self.move_snake()
+
+        return self.get_state()
 
 
 def display_state_console20x20(state):

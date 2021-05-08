@@ -8,13 +8,17 @@ EMPTY_CHAR = ' '
 WALL_CHAR = '#'
 FOOD_CHAR = '@'
 
-parser = argparse.ArgumentParser(description="A* For Snake")
-group_interactive = parser.add_mutually_exclusive_group(required=False)
-group_interactive.add_argument('-i', "--interactive", action='store_true', help="Shows in a colorful way what the "
-                                                                                "algorithm is computing (only useful "
-                                                                                "for A* "
-                                                                                "and variants)")
-group_algorithm = parser.add_mutually_exclusive_group(required=True)
+parser = argparse.ArgumentParser(description="A* For Snake. If no argument is given, the game starts in player mode.")
+
+group_play = parser.add_mutually_exclusive_group(required=False)
+group_play.add_argument('-p', "--player", action='store_true', help="Player mode: the player controls the game")
+group_play.add_argument('-x', "--ai", action='store_true', help="AI mode: the AI controls the game (requires an "
+                                                                "algorithm argument)")
+group_play.add_argument('-t', "--training", action='store_true', help="Training mode: the AI controls the game and a "
+                                                                      "file is written to keep track of the scores ("
+                                                                      "requires an algorithm argument)")
+
+group_algorithm = parser.add_mutually_exclusive_group(required=False)
 group_algorithm.add_argument('-s', "--sshaped", action='store_true', help="S-Shaped algorithm: browses the whole "
                                                                           "grid each time in an 'S' shape. Only "
                                                                           "works if height of grid is even.")
@@ -25,7 +29,16 @@ group_algorithm.add_argument('-w', "--weighted", action='store_true', help="Weig
 group_algorithm.add_argument('-n', "--inverse", action='store_true', help="Inverse A* algorithm: A* algorithm where "
                                                                           "the F value is 1000-F")
 
+group_interactive = parser.add_mutually_exclusive_group(required=False)
+group_interactive.add_argument('-i', "--interactive", action='store_true', help="Shows in a colorful way what the "
+                                                                                "algorithm is computing (only useful "
+                                                                                "for A* "
+                                                                                "and variants)")
 args = parser.parse_args()
+
+if (args.ai or args.training) and not (not args.sshaped or not args.astar or
+                                       not args.weighted or not args.inverse):
+    parser.error("AI or Training mode must be precised an algorithm.")
 
 if args.interactive:
     interactive = True
@@ -146,7 +159,7 @@ def main():
                         for el in path:
                             print(el.position)
                             game.grid[el.position[0]][el.position[1]] = 'A'
-                            time.sleep(0.1)
+                            time.sleep(0.07)
                             game.draw()
                         for el in path:
                             print(el.position)
@@ -257,20 +270,30 @@ def main():
 
             return path[::-1]
 
-    agent = IAExample()  # None for interactive GUI
-    game = GUISnakeGame()
-    game.init_pygame()
 
-    while game.is_running():
-        game.next_tick(agent)
+    agent = IAExample() if (args.ai or args.training) else None # None for interactive GUI
 
-    game.cleanup_pygame()
+    ### FOR TRAINING : ###
+    ######################
 
-    # game = TrainingSnakeGame(agent)
-    # game.start_run()
+    if args.training:
+        game = TrainingSnakeGame(agent)
+        game.start_run()
 
-    # while game.is_alive():
-    #    game.next_tick()
+        while game.is_alive():
+            game.next_tick()
+
+    ### FOR GAMING : ###
+    #####################
+
+    else:
+        game = GUISnakeGame()
+        game.init_pygame()
+
+        while game.is_running():
+            game.next_tick(agent)
+
+        game.cleanup_pygame()
 
 
 # if __name__ == '__main__':
