@@ -252,7 +252,6 @@ class GUISnakeGame(SnakeGame):
         self.frame = 0
 
     def next_tick(self, learning_agent=None):
-        # time.sleep(0.5)
         self.process_event(learning_agent)
         if self.is_alive() and (self.frame / FPS >= 1 / self.get_mps() or learning_agent is not None):
             self.move_snake()

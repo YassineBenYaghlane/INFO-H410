@@ -2,7 +2,10 @@ from gameModule import *
 import heapq
 import time
 import argparse
+import numpy as np
 import multiprocessing
+
+rng = np.random.default_rng(171)
 
 SNAKE_CHAR = '+'
 WALL_CHAR = '#'
@@ -24,6 +27,8 @@ group_play.add_argument('-t', "--training", action='store_true',
                              "requires an algorithm argument and an output "
                              "file)")
 group_algorithm = parser.add_mutually_exclusive_group(required=False)
+group_algorithm.add_argument('-r', "--random", action='store_true', help="Random play: a random move is drawn at "
+                                                                         "iteration.")
 group_algorithm.add_argument('-s', "--sshaped", action='store_true', help="S-Shaped algorithm: browses the whole "
                                                                           "grid each time in an 'S' shape. Only "
                                                                           "works if height of grid is even.")
@@ -94,42 +99,47 @@ def main():
             grid, score, alive, head = state
             # print("Choosing next move")
 
-            if not self.best_path:
-                if args.astar:
-                    self.best_path = self.astar(state, mode='default', interactive=interactive)
-                elif args.weighted:
-                    self.best_path = self.astar(state, mode='weighted', interactive=interactive)
-                elif args.inverse:
-                    self.best_path = self.astar(state, mode='inverse', interactive=interactive)
-                elif args.sshaped:
-                    self.best_path = self.sshape(state)
+            if args.random:
+                r = rng.integers(4)
+                next_move = self.moves[r]
 
-            if self.best_path == 171:
-                print('A* did not find any path')
-                game.alive = False
-                return self.moves[1]
+            else:
+                if not self.best_path:
+                    if args.astar:
+                        self.best_path = self.astar(state, mode='default', interactive=interactive)
+                    elif args.weighted:
+                        self.best_path = self.astar(state, mode='weighted', interactive=interactive)
+                    elif args.inverse:
+                        self.best_path = self.astar(state, mode='inverse', interactive=interactive)
+                    elif args.sshaped:
+                        self.best_path = self.sshape(state)
 
-            next_node = self.best_path.pop()
-            next_pos = next_node.position
+                if self.best_path == 171:
+                    print('A* did not find any path')
+                    game.alive = False
+                    return self.moves[1]
 
-            next_mov_bool = []
+                next_node = self.best_path.pop()
+                next_pos = next_node.position
 
-            for i in range(len(next_pos)):
-                next_mov_bool.append(next_pos[i] - head[i])
+                next_mov_bool = []
 
-            if next_mov_bool[0] == 0:
-                if next_mov_bool[1] == 1:
-                    next_move = self.moves[0]
-                elif next_mov_bool[1] == -1:
-                    next_move = self.moves[2]
+                for i in range(len(next_pos)):
+                    next_mov_bool.append(next_pos[i] - head[i])
+
+                if next_mov_bool[0] == 0:
+                    if next_mov_bool[1] == 1:
+                        next_move = self.moves[0]
+                    elif next_mov_bool[1] == -1:
+                        next_move = self.moves[2]
+                    else:
+                        print("Problem in moves, head: ", head, ", next_pos: ", next_pos)
+                elif next_mov_bool[0] == 1:
+                    next_move = self.moves[1]
+                elif next_mov_bool[0] == -1:
+                    next_move = self.moves[3]
                 else:
                     print("Problem in moves, head: ", head, ", next_pos: ", next_pos)
-            elif next_mov_bool[0] == 1:
-                next_move = self.moves[1]
-            elif next_mov_bool[0] == -1:
-                next_move = self.moves[3]
-            else:
-                print("Problem in moves, head: ", head, ", next_pos: ", next_pos)
 
             return next_move
 
@@ -159,6 +169,7 @@ def main():
                 closed_list.append(current_node)
 
                 if interactive:
+                    time.sleep(0.2)
                     game.grid[current_node.position[0]][current_node.position[1]] = 'C'
                     game.draw()
 
@@ -171,7 +182,7 @@ def main():
                     if interactive:
                         for el in path:
                             game.grid[el.position[0]][el.position[1]] = 'A'
-                            time.sleep(0.07)
+                            time.sleep(0.2)
                             game.draw()
                         for el in path:
                             game.grid[el.position[0]][el.position[1]] = ' '
@@ -289,6 +300,7 @@ def main():
         out_file.write('count,score\n')
         game = TrainingSnakeGame(agent)
         game.start_run()
+        start_time = time.time()
 
         count = 0
         while game.is_alive() and game.score < 100:
@@ -296,6 +308,9 @@ def main():
             game.next_tick()
             count += 1
         print('Game not alive')
+        time_taken = time.time() - start_time
+        out_file.flush()
+        out_file.write(str(count)+','+format(time_taken, '.4f'))
         out_file.flush()
         out_file.close()
 
