@@ -6,8 +6,10 @@ from matplotlib.patches import Ellipse
 NUM_SAMPLES = 30
 
 # %%
-file_path = './out4/'
-names = ['random', 'sshaped', 'astar', 'inverse', 'weighted']
+file_path = './compare/'
+#names = ['random', 'sshaped', 'astar', 'inverse', 'weighted']
+names = ['survival', 'sshaped', 'astar', 'inverse', 'weighted']
+
 colors = ['k', 'g', 'b', 'm', 'c']
 
 big_dictionary = {}
@@ -135,3 +137,6 @@ with open('times.txt', 'w') as file:
     file.write('\\underline{\\textbf{Av. time per move}} & \\textbf{Time ($\\mus$)} \\\\\n')
     for name in names:
         file.write(name+'&'+str(mean_time_dictionary[name])+'\\\\\n')
+
+# %%
+### TEST SURVIVAL

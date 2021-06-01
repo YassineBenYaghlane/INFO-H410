@@ -10,6 +10,7 @@ rng = np.random.default_rng(171)
 SNAKE_CHAR = '+'
 WALL_CHAR = '#'
 FOOD_CHAR = '@'
+EMPTY_CHAR = ' '
 
 ### PARSER DEFINITION ###
 #########################
@@ -46,6 +47,10 @@ group_interactive.add_argument('-i', "--interactive", action='store_true', help=
                                                                                 "algorithm is computing (only useful "
                                                                                 "for A* "
                                                                                 "and variants)")
+
+group_survival = parser.add_mutually_exclusive_group(required=False)
+group_survival.add_argument('-z', "--survival", action='store_true', help="Survival mode: tries to survive when the "
+                                                                          "algorithm chosen doesn't find any path")
 parser.add_argument('-o', "--output", type=str,
                     help="To specify the file to write the results of the training in. If "
                          "specified in another mode, no file will be created")
@@ -94,9 +99,11 @@ def main():
             self.i = 0
             self.best_path = None
             self.first = True
+            self.is_survival_mode = False
 
         def choose_next_move(self, state):
-            grid, score, alive, head = state
+            grid, score, alive, snake = state
+            head = snake[0]
             # print("Choosing next move")
 
             if args.random:
@@ -105,6 +112,9 @@ def main():
 
             else:
                 if not self.best_path:
+                    if self.is_survival_mode:
+                        print("End Survival mode")
+                        self.is_survival_mode = False
                     if args.astar:
                         self.best_path = self.astar(state, mode='default', interactive=interactive)
                     elif args.weighted:
@@ -115,9 +125,18 @@ def main():
                         self.best_path = self.sshape(state)
 
                 if self.best_path == 171:
-                    print('A* did not find any path')
-                    game.alive = False
-                    return self.moves[1]
+                    if args.survival:
+                        print('Start Survival mode')
+                        self.is_survival_mode = True
+                        # time.sleep(5)
+                        self.best_path = self.survival_mode(state)
+                        if self.best_path == 171:
+                            print("Survival mode did not work")
+                            return self.moves[1]
+                    else:
+                        print('A* did not find any path')
+                        game.alive = False
+                        return self.moves[1]
 
                 next_node = self.best_path.pop()
                 next_pos = next_node.position
@@ -143,25 +162,29 @@ def main():
 
             return next_move
 
+
         def h_cost(self, current, end, grid):
             res = abs(current.position[0] - end.position[0]) + abs(
                 current.position[1] - end.position[1])
-
-            # print(f"grid ({len(grid)},{len(grid[0])})")
-            # print(f"current : ({current.position[0]},{current.position[1]})")
-            # dist_to_border_x = min(current.position[1], len(grid[0]) - current.position[1])
-            # dist_to_border_y = min(current.position[0], len(grid) - current.position[0])
-            # print(f"dist to border x : {dist_to_border_x}")
-            # print(f"dist to border y : {dist_to_border_y}")
-            # res += dist_to_border_x*10 + dist_to_border_y*10
             return res
 
-        def astar(self, state, mode='default', interactive=False):
-            grid, score, alive, head = state
+
+        def astar(self, state, mode='default', interactive=False, survival=False, goal_pos=None):
+            grid, score, alive, snake = state
+            head = snake[0]
+
             closed_list = []
             open_list = []
+
+            if not survival:
+                goal_pos = game.food
+
+            goal_node = Node(goal_pos, None)
             head_node = Node(head, None)
-            food_node = Node(game.food, None)
+
+            if survival:
+                game.grid[goal_node.position[0]][goal_node.position[1]] = EMPTY_CHAR
+
             heapq.heappush(open_list, head_node)
 
             while open_list:
@@ -169,11 +192,11 @@ def main():
                 closed_list.append(current_node)
 
                 if interactive:
-                    time.sleep(0.2)
+                    # time.sleep(0.2)
                     game.grid[current_node.position[0]][current_node.position[1]] = 'C'
                     game.draw()
 
-                if current_node.position == food_node.position:
+                if current_node.position == goal_node.position:
                     path = []
                     while current_node.parent is not None:
                         path.append(current_node)
@@ -182,17 +205,20 @@ def main():
                     if interactive:
                         for el in path:
                             game.grid[el.position[0]][el.position[1]] = 'A'
-                            time.sleep(0.2)
+                            # time.sleep(0.2)
                             game.draw()
                         for el in path:
-                            game.grid[el.position[0]][el.position[1]] = ' '
+                            game.grid[el.position[0]][el.position[1]] = EMPTY_CHAR
                         for el in open_list:
-                            game.grid[el.position[0]][el.position[1]] = ' '
+                            game.grid[el.position[0]][el.position[1]] = EMPTY_CHAR
                         for el in closed_list:
-                            game.grid[el.position[0]][el.position[1]] = ' '
-                        game.grid[food_node.position[0]][food_node.position[1]] = FOOD_CHAR
+                            game.grid[el.position[0]][el.position[1]] = EMPTY_CHAR
+                        game.grid[goal_node.position[0]][goal_node.position[1]] = FOOD_CHAR
                         game.grid[head_node.position[0]][head_node.position[1]] = SNAKE_CHAR
                         game.draw()
+
+                    if survival:
+                        game.grid[goal_node.position[0]][goal_node.position[1]] = SNAKE_CHAR
                     return path
 
                 children = []
@@ -232,17 +258,17 @@ def main():
                         # Create the f, g, and h values
                         if mode == 'default':
                             child.g = current_node.g + 1
-                            child.h = self.h_cost(child, food_node, grid)
+                            child.h = self.h_cost(child, goal_node, grid)
                             child.f = child.g + child.h
 
                         elif mode == 'weighted':
                             child.g = current_node.g + 1
-                            child.h = 10 * (self.h_cost(child, food_node, grid))
+                            child.h = 10 * (self.h_cost(child, goal_node, grid))
                             child.f = child.g + child.h
 
                         elif mode == 'inverse':
                             child.g = current_node.g + 1
-                            child.h = self.h_cost(child, food_node, grid)
+                            child.h = self.h_cost(child, goal_node, grid)
                             child.f = 100000 - (child.g + child.h)
 
                         child.parent = current_node
@@ -259,8 +285,34 @@ def main():
 
             return 171
 
+        # (self, state, mode='default', interactive=False, survival=False, goal_pos=None):
+        def survival_mode(self, state):
+            grid, score, alive, snake = state
+            head = snake[0]
+            body_pos = []
+            body_pos.append(head)
+
+            last_attainable_node_index = len(snake) - 1
+            best_path = 171
+            while last_attainable_node_index > 5:
+                if args.astar:
+                    mode = 'astar'
+                elif args.weighted:
+                    mode = 'weighted'
+                elif args.inverse:
+                    mode = 'inverse'
+                path = self.astar(state, mode=mode, interactive=args.interactive, survival=True, goal_pos=[last_attainable_node_index])
+                if path != 171 and len(path) >= 3 and (
+                        (best_path != 171 and len(path) > len(best_path)) or (best_path == 171)):
+                    best_path = path
+                last_attainable_node_index -= 1
+
+            return best_path
+
+
         def sshape(self, state):
-            grid, score, alive, head = state
+            grid, score, alive, snake = state
+            head = snake[0]
             path = []
             if score == 0:
                 if head[0] == 0 and self.first:

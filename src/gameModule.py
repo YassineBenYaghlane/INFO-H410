@@ -208,7 +208,7 @@ class SnakeGame:
             return self.get_state()
 
     def get_state(self):
-        return self.grid, self.score, self.alive, self.snake[0]
+        return self.grid, self.score, self.alive, self.snake
 
     def get_grid_base(self, width, height):
         menu_start = width * 2 / 3

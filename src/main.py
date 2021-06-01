@@ -3,7 +3,7 @@ import os
 
 
 def runMP(core_name, core_id):
-    file_path = './out4/'
+    file_path = './compare/'
     if core_id == 1:
         command = 'python ./src/snakeAI.py -t -s -o '
         filename_base = file_path+'sshaped_'
@@ -21,8 +21,8 @@ def runMP(core_name, core_id):
         filename_base = file_path+'inverse_'
 
     elif core_id == 5:
-        command = 'python ./src/snakeAI.py -t -r -o '
-        filename_base = file_path+'random_'
+        command = 'python ./src/snakeAI.py -t -w -z -o '
+        filename_base = file_path+'survival_'
 
 
     else:
