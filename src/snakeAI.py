@@ -282,6 +282,8 @@ def main():
                             else:
                                 game.grid[child.position[0]][child.position[1]] = 'S'
                             game.draw()
+            if survival:
+                game.grid[goal_node.position[0]][goal_node.position[1]] = SNAKE_CHAR
 
             return 171
 
@@ -301,7 +303,7 @@ def main():
                     mode = 'weighted'
                 elif args.inverse:
                     mode = 'inverse'
-                path = self.astar(state, mode=mode, interactive=args.interactive, survival=True, goal_pos=[last_attainable_node_index])
+                path = self.astar(state, mode=mode, interactive=args.interactive, survival=True, goal_pos=snake[last_attainable_node_index])
                 if path != 171 and len(path) >= 3 and (
                         (best_path != 171 and len(path) > len(best_path)) or (best_path == 171)):
                     best_path = path

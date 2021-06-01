@@ -137,6 +137,3 @@ with open('times.txt', 'w') as file:
     file.write('\\underline{\\textbf{Av. time per move}} & \\textbf{Time ($\\mus$)} \\\\\n')
     for name in names:
         file.write(name+'&'+str(mean_time_dictionary[name])+'\\\\\n')
-
-# %%
-### TEST SURVIVAL
