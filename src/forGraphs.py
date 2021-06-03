@@ -2,12 +2,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 
-NUM_SAMPLES = 30
+NUM_SAMPLES = 30 # Defines the number of files per algorithm (set in main.py)
+
+
+# The "#%%" makes separate cells that can be ran individually
 
 # %%
-file_path = './out4/'
-names = ['random', 'sshaped', 'astar', 'inverse', 'weighted']
-colors = ['k', 'g', 'b', 'm', 'c']
+file_path = './out4/' # Directory with the csv files
+names = ['random', 'sshaped', 'astar', 'inverse', 'weighted'] # The names of the files (without "_[number]")
+colors = ['k', 'g', 'b', 'm', 'c'] # Some colors for the graphs
+
+
+# Here we put all the values in a big dictionary. For example, big_dictionary['astar'][1] will
+# be a 2-dim numpy array with the values of the corresponding file (astar_1.csv)
+# The time_dictionary is of the form: time_dictionary['astar'] is a list of 2-list where each 
+# 2-list is [max number of moves, time taken]
 
 big_dictionary = {}
 time_dictionary = {}
@@ -26,6 +35,10 @@ for name in names:
             big_dictionary[name][i] = np.asarray(big_dictionary[name][i])
 
 # %%
+
+# Here we create dictionaries with the mean values. Note that the operation is a little bit 
+# more complex than a simple "np.mean" because not all numpy arrays have the same sizes, 
+# hence the use of masked arrays.
 
 mean_dictionary = {}
 mean_time_dictionary = {}
@@ -49,10 +62,11 @@ for name in names:
 
     mean_time_dictionary[name] = np.mean(temp_array)*1000000
 
-# %%
-print(big_dictionary['random'])
 
 # %%
+
+# Here we create the main graphs, showing the evolution of the score in function of the 
+# number of moves.
 
 plt.figure(figsize=(13, 8))
 for name, color in zip(names, colors):
