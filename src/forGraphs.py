@@ -1,3 +1,7 @@
+### ---------- EXPLANATION ------------- ###
+# File to create the different graphs shown 
+# in the report.
+
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
