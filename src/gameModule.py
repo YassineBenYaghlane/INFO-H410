@@ -1,4 +1,8 @@
 # Made with lots of clumsiness and love by Jean Pierre HUYNH.
+# github : https://github.com/jeanmadao/snAIke
+# This file is the implementation of the snake game found on github.
+
+
 import pygame, random, time
 
 TITLE = "snAIke!"

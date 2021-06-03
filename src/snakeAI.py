@@ -47,6 +47,10 @@ group_interactive.add_argument('-i', "--interactive", action='store_true', help=
                                                                                 "algorithm is computing (only useful "
                                                                                 "for A* "
                                                                                 "and variants)")
+
+parser.add_argument('-z', "--survival", action='store_true',
+                    help="use survival mode if specified")
+
 parser.add_argument('-o', "--output", type=str,
                     help="To specify the file to write the results of the training in. If "
                          "specified in another mode, no file will be created")
@@ -92,127 +96,84 @@ def main():
     class IAExample:
         def __init__(self):
             self.moves = [RIGHT, DOWN, LEFT, UP]
-            self.i = 0
-            self.best_path = None
-            self.first = True
-            self.is_survival_mode = False
+            self.best_path = None # The path used by the snake
+            self.first = True # Boolean
+            self.is_in_survival_mode = False
 
         def choose_next_move(self, state):
+            """
+                This function is called by the game instance in order to find the next move chosen by the used algorithm.
+                In our case, there are 5 different algorithms : Random, SShaped, A*, A* weighted and A* reversed. All of
+                them are described in detail in the report
+
+            :param state: The state containing the grid, the snake body, the score and a boolean indicating if the snake
+                          is alive
+            :return: The move chosen by the algorithm
+            """
+
             grid, score, alive, snake = state
             head = snake[0]
-            # print("Choosing next move")
 
+            # args.survival is the boolean that indicates if the user wanted the algorithm to use the survival mode
+            # self.is_in_survival_mode indicates if the algorithm is in survival mode at the current move
+            if args.survival:
+                # check if the snake can find a path to the apple and then end survival mode
+                if self.is_in_survival_mode and self.best_path and self.astar(state, game.food, mode='default', interactive=interactive) != 171:
+                    self.best_path = []
+                    print("End Survival mode")
+                    self.is_in_survival_mode = False
+
+            # Random algorithm
             if args.random:
                 r = rng.integers(4)
                 next_move = self.moves[r]
 
             else:
+                # When self.best_path is empty, that means we need to generate a path with the algorithm specified.
+                # We also need to end the survival mode if the snake was previously in this mode
                 if not self.best_path:
-                    if self.is_survival_mode:
-                        print("End Survival mode")
-                        self.is_survival_mode = False
+                    if args.survival:
+                        if self.is_in_survival_mode:
+                            print("End Full Survival mode")
+                            self.is_in_survival_mode = False
                     if args.astar:
-                        self.best_path = self.astar(state, mode='default', interactive=interactive)
+                        self.best_path = self.astar(state, game.food, mode='default', interactive=interactive)
                     elif args.weighted:
-                        self.best_path = self.astar(state, mode='weighted', interactive=interactive)
+                        self.best_path = self.astar(state, game.food, mode='weighted', interactive=interactive)
                     elif args.inverse:
-                        self.best_path = self.astar(state, mode='inverse', interactive=interactive)
+                        self.best_path = self.astar(state, game.food, mode='inverse', interactive=interactive)
                     elif args.sshaped:
                         self.best_path = self.sshape(state)
 
+                # When A* does not find any path to his goal, our implementation returns 171. In that case, we need to
+                # enter in survival mode (if specified by the user).
                 if self.best_path == 171:
-                    print('Start Survival mode')
-                    self.is_survival_mode = True
-                    # time.sleep(5)
-                    self.best_path = self.survival_mode(state)
-                    if self.best_path == 171:
-                        print("Survival mode did not work")
+                    if args.survival:
+                        print('Start Survival mode')
+                        self.is_in_survival_mode = True
+                        # time.sleep(5)
+                        self.best_path = self.survival_mode(state)
+                        if self.best_path == 171:
+                            print("Survival mode did not work")
+                            return self.moves[1]
+                    else:
+                        # if the user does not specify to use the survival mode, the snake goes DOWN when A* does not work
+                        print("A* did not find path")
                         return self.moves[1]
 
-                # if args.astar and not survival_mode and len(self.best_path) > 2:
-                #     next_move = self.look_ahead_two_moves(state, self.best_path)
-                # else:
                 next_move = self.get_next_move(self.best_path, head)
 
             return next_move
 
-        def look_ahead_two_moves(self, state, best_path):
-            path = best_path.copy()
-            print(path)
-            grid, score, alive, snake = state
 
-            default_next_move = self.get_next_move(self.best_path, snake[0])
-
-            # Create state after 1 move
-            next_state = deepcopy(state)
-            next_snake = next_state[-1]
-            next_grid = next_state[0]
-            next_move = self.get_next_move(path, snake[0]) # The move that brings to "next_state"
-            print("next_move : ", next_move)
-            next_pos = (next_snake[0][0] + next_move[0], next_snake[0][1] + next_move[1])
-            next_grid[next_pos[0]][next_pos[1]] = SNAKE_CHAR
-            next_grid[snake[-1][0]][snake[-1][1]] = EMPTY_CHAR
-            next_snake.pop()
-            next_snake.insert(0,next_pos)
-
-            next_move_1 = self.get_next_move(path, next_snake[0])
-            print("next_move_1 : ", next_move_1)
-
-            nb_tried_move = 0
-            trapped = self.is_trap(next_state, next_move_1)
-            if trapped:
-                print("trapped in 2 moves. Finding other path")
-                # time.sleep(5)
-                new_path = deepcopy(best_path)
-
-                while trapped and nb_tried_move < 3:
-                    # time.sleep(5)
-                    print(f"move {nb_tried_move}")
-                    virtual_state = deepcopy(state)
-                    virtual_grid = virtual_state[0]
-                    # new_pos = (virtual_snake[0][0] + next_move[0], virtual_snake[0][1] + next_move[1])
-                    virtual_grid[next_pos[0]][next_pos[1]] = WALL_CHAR
-                    new_path = self.astar(virtual_state, mode='inverse', interactive=interactive)
-
-                    if new_path != 171 and len(new_path) > 2:
-                        print("dans if")
-                        new_path_copy = deepcopy(new_path)
-                        # Create state after 1 move
-                        next_state = deepcopy(state)
-                        next_snake = next_state[-1]
-                        next_grid = next_state[0]
-                        next_move = self.get_next_move(new_path_copy, snake[0])  # The move that brings to "next_state"
-                        next_pos = (next_snake[0][0] + next_move[0], next_snake[0][1] + next_move[1])
-                        next_grid[next_pos[0]][next_pos[1]] = SNAKE_CHAR
-                        next_grid[snake[-1][0]][snake[-1][1]] = EMPTY_CHAR
-                        next_snake.pop()
-                        next_snake.insert(0, next_pos)
-
-                        next_move_1 = self.get_next_move(new_path_copy, next_snake[0])
-                        print("next_move_1 : ", next_move_1)
-                        trapped = self.is_trap(next_state, next_move_1)
-                        print("fin if")
-                        #
-                        # next_move = self.get_next_move(new_path, snake[0])
-                        # trapped = self.is_trap(state, next_move)
-                    else:
-                        trapped = True
-
-                    nb_tried_move += 1
-
-
-                if not trapped: # Update path if the new path is better
-                    print(f"found better path (move {nb_tried_move-1})")
-                    self.best_path = new_path
-                    next_move = self.get_next_move(self.best_path, snake[0])
-                    return next_move
-
-            print("keep old")
-            # keep old path if not trapped or no better path found
-            next_move = default_next_move
-            return next_move
 
         def get_next_move(self, path, head):
+            """
+                This function finds the next move to do based on the head and the path.
+            :param path: The path followed by the snake
+            :param head: The head of the snake
+            :return: The next move
+            """
             next_node = path.pop()
             next_pos = next_node.position
             next_move = self.moves[0]
@@ -238,29 +199,24 @@ def main():
 
             return next_move
 
-        def is_trap(self, state, next_move):
-            grid, score, alive, snake = state
-            future_grid = deepcopy(grid)
-            future_grid[snake[-1][0]][snake[-1][1]] = EMPTY_CHAR
-
-            new_pos = (snake[0][0] + next_move[0], snake[0][1] + next_move[1])
-            future_grid[new_pos[0]][new_pos[1]] = EMPTY_CHAR
-
-            nb_attainable = self.count_nb_attainable(future_grid, new_pos, score)
-            total_attainable = len(grid)*len(grid[0])-len(snake)
-
-            if nb_attainable / total_attainable < 0.6:
-                print(f"Nb attainable : {nb_attainable}, Total empty: {total_attainable}")
-                print("Next move is bad !")
-                return True
-            return False
-
         def h_cost(self, current, end):
+            """
+                Cost used in the A* algorithm
+            :param current: current node
+            :param end: end node
+            :return: the Manhattan distance between the current node and the end node
+            """
             res = abs(current.position[0] - end.position[0]) + abs(
                 current.position[1] - end.position[1])
             return res
 
         def dist_to_snake(self, current, snake):
+            """
+                This function computes the minimum distance between a node and the snake body
+            :param current: current node
+            :param snake: snake body
+            :return:
+            """
             best_cost = 100000
             for i in snake:
                 n = Node(i, None)
@@ -269,13 +225,25 @@ def main():
                     best_cost = cost
             return best_cost
 
-        def astar(self, state, mode='default', interactive=False):
+        def astar(self, state, goal_pos, mode='default', interactive=False):
+            """
+                This function is an implementation of the A* algorithm
+            :param state: The current state of the game
+            :param goal_pos: The position where the snake has to go
+            :param mode: default = classic A*, weighted = weighted A*, inverse = reverse A*, survival = A* for survival mode
+            :param interactive: Display the execution of the A* algorithm
+            :return: The path to the goal
+            """
             grid, score, alive, snake = state
             head = snake[0]
             closed_list = []
             open_list = []
             head_node = Node(head, None)
-            food_node = Node(game.food, None)
+            food_node = Node(goal_pos, None)
+
+            if mode == "survival":
+                game.grid[food_node.position[0]][food_node.position[1]] = EMPTY_CHAR
+
             heapq.heappush(open_list, head_node)
 
             while open_list:
@@ -283,7 +251,7 @@ def main():
                 closed_list.append(current_node)
 
                 if interactive:
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                     game.grid[current_node.position[0]][current_node.position[1]] = 'C'
                     game.draw()
 
@@ -296,7 +264,7 @@ def main():
                     if interactive:
                         for el in path:
                             game.grid[el.position[0]][el.position[1]] = 'A'
-                            time.sleep(0.2)
+                            time.sleep(0.1)
                             game.draw()
                         for el in path:
                             game.grid[el.position[0]][el.position[1]] = ' '
@@ -307,6 +275,9 @@ def main():
                         game.grid[food_node.position[0]][food_node.position[1]] = FOOD_CHAR
                         game.grid[head_node.position[0]][head_node.position[1]] = SNAKE_CHAR
                         game.draw()
+
+                    if mode == "survival":
+                        game.grid[food_node.position[0]][food_node.position[1]] = SNAKE_CHAR
                     return path
 
                 children = []
@@ -357,7 +328,12 @@ def main():
                         elif mode == 'inverse':
                             child.g = current_node.g + 1
                             child.h = self.h_cost(child, food_node)
-                            child.f =  - (child.g + child.h + self.dist_to_snake(child, snake))
+                            child.f =  10000 - (child.g + child.h)
+
+                        elif mode == 'survival':
+                            child.g = current_node.g + 1
+                            child.h = self.h_cost(child, food_node)
+                            child.f = - (child.g + 5 * child.h) + 2 * self.dist_to_snake(child, snake)
 
                         child.parent = current_node
 
@@ -371,9 +347,18 @@ def main():
                                 game.grid[child.position[0]][child.position[1]] = 'S'
                             game.draw()
 
+            if mode == "survival":
+                game.grid[food_node.position[0]][food_node.position[1]] = SNAKE_CHAR
+
             return 171
 
         def sshape(self, state):
+            """
+                SShaped implementation. The snake does the same path during all the game and it gives the perfect score.
+            :param state: The current state of the game
+            :return: The path the snake has to follow
+            """
+
             grid, score, alive, snake = state
             head = snake[0]
             path = []
@@ -406,170 +391,25 @@ def main():
             return path[::-1]
 
         def survival_mode(self, state):
+            """
+                This function is a Survival mode implementation. The snake tries to find the longest path from his head
+                to his tail beginning at the last node of his tail to the 5th node.
+            :param state: The current state of the game
+            :return: The longest path to his tail. The function may return 171 which indicate that no path has been found.
+                     This case is managed at a higher level.
+            """
             grid, score, alive, snake = state
-            head = snake[0]
-            body_pos = []
-            body_pos.append(head)
-
             last_attainable_node_index = len(snake) - 1
             best_path = 171
+
             while last_attainable_node_index > 5:
-                path = self.astar_survival(state, snake[last_attainable_node_index])
+                path = self.astar(state, snake[last_attainable_node_index], mode="survival")
                 if path != 171 and len(path) >= 3 and ((best_path != 171 and len(path) > len(best_path)) or (best_path == 171)):
                     best_path = path
                 last_attainable_node_index -= 1
 
 
             return best_path
-
-        def astar_survival(self, state, goal_pos, interactive=False):
-            grid, score, alive, snake = state
-            head = snake[0]
-            closed_list = []
-            open_list = []
-            head_node = Node(head, None)
-            food_node = Node(goal_pos, None)
-            game.grid[food_node.position[0]][food_node.position[1]] = EMPTY_CHAR
-            heapq.heappush(open_list, head_node)
-
-            while open_list:
-                current_node = heapq.heappop(open_list)
-                closed_list.append(current_node)
-
-                if interactive:
-                    time.sleep(0.2)
-                    game.grid[current_node.position[0]][current_node.position[1]] = 'C'
-                    game.draw()
-
-                if current_node.position == food_node.position:
-                    path = []
-                    while current_node.parent is not None:
-                        path.append(current_node)
-                        current_node = current_node.parent
-
-                    if interactive:
-                        for el in path:
-                            game.grid[el.position[0]][el.position[1]] = 'A'
-                            time.sleep(0.2)
-                            game.draw()
-                        for el in path:
-                            game.grid[el.position[0]][el.position[1]] = ' '
-                        for el in open_list:
-                            game.grid[el.position[0]][el.position[1]] = ' '
-                        for el in closed_list:
-                            game.grid[el.position[0]][el.position[1]] = ' '
-                        game.grid[food_node.position[0]][food_node.position[1]] = FOOD_CHAR
-                        game.grid[head_node.position[0]][head_node.position[1]] = SNAKE_CHAR
-                        game.draw()
-
-                    game.grid[food_node.position[0]][food_node.position[1]] = SNAKE_CHAR
-                    return path
-
-                children = []
-                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-                    node_position = (
-                        current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-                    # Make sure within range
-                    if node_position[0] > (len(grid) - 1) or node_position[0] < 0 or node_position[1] > (
-                            len(grid[len(grid) - 1]) - 1) or node_position[1] < 0:
-                        continue
-
-                    # Make sure walkable terrain
-                    if grid[node_position[0]][node_position[1]] == SNAKE_CHAR or \
-                            grid[node_position[0]][node_position[1]] == WALL_CHAR:
-                        continue
-
-                    # Create new node
-                    new_node = Node(node_position, current_node)
-
-                    # Append
-                    children.append(new_node)
-
-                # Loop through children
-                for child in children:
-
-                    # Child is on the closed list
-                    if child in closed_list:
-                        continue
-
-                    if child in open_list:
-                        if child.g > current_node.g + 1:
-                            child.g = current_node.g + 1
-                            child.parent = current_node
-
-                    else:
-                        child.g = current_node.g + 1
-                        child.h = self.h_cost(child, food_node)
-                        child.f = 100000 - (child.g + child.h)# + self.dist_to_snake(child, snake))
-
-                        child.parent = current_node
-
-                        # Add the child to the open list
-                        heapq.heappush(open_list, child)
-
-                        if interactive:
-                            if game.grid[child.position[0]][child.position[1]] == '+':
-                                pass
-                            else:
-                                game.grid[child.position[0]][child.position[1]] = 'S'
-                            game.draw()
-            game.grid[food_node.position[0]][food_node.position[1]] = SNAKE_CHAR
-            return 171
-
-        def is_good_path(self, state, path):
-            grid, score, alive, snake = state
-            head = snake[0]
-            future_grid = deepcopy(grid)
-            for i in range(len(future_grid)):
-                for j in range(len(future_grid[i])):
-                    future_grid[i][j] = EMPTY_CHAR
-
-            future_head = (path[0].position[0], path[0].position[1])
-
-            i = 0
-            while i < len(path) and i < len(snake):
-                future_grid[path[i].position[0]][path[i].position[1]] = SNAKE_CHAR
-                i += 1
-
-            if i < len(snake):
-                while i < len(snake):
-                    future_grid[snake[i][0]][snake[i][1]] = SNAKE_CHAR
-                    i += 1
-
-            nb_attainable = self.count_nb_attainable(future_grid, future_head, score)
-            total_attainable = len(grid)*len(grid[0])-len(snake)
-
-            if nb_attainable/total_attainable < 0.8:
-                print(f"Nb attainable : {nb_attainable}, Total empty: {total_attainable}")
-                print("Next path is bad !")
-                return False
-            return True
-
-        def count_nb_attainable(self, future_grid, future_head, score):
-            closed_list = [] # already checked
-            open_list = [] # to check
-
-            open_list.append(future_head)
-
-            while open_list:
-                current_pos = open_list.pop()
-
-                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-                    new_pos = (current_pos[0] + new_position[0], current_pos[1] + new_position[1])
-
-                    # Make sure within range
-                    if new_pos[0] > (len(future_grid) - 1) or new_pos[0] < 0 or new_pos[1] > (
-                            len(future_grid[len(future_grid) - 1]) - 1) or new_pos[1] < 0:
-                        continue
-
-
-                    if future_grid[new_pos[0]][new_pos[1]] == EMPTY_CHAR and (new_pos not in closed_list) and (new_pos not in open_list):
-                        open_list.append(new_pos)
-
-                closed_list.append(current_pos)
-
-            return len(closed_list)-1 # -1 because we start with the head which is not an empty node
 
 
     agent = IAExample() if (args.ai or args.training) else None  # None for interactive GUI
@@ -608,6 +448,4 @@ def main():
 
         game.cleanup_pygame()
 
-
-#if __name__ == '__main__':
 main()

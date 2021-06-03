@@ -3,14 +3,14 @@ import os
 
 
 def runMP(core_name, core_id):
-    file_path = './out4/'
+    file_path = './survival/'
     if core_id == 1:
         command = 'python ./src/snakeAI.py -t -s -o '
         filename_base = file_path+'sshaped_'
 
     elif core_id == 2:
         command = 'python ./src/snakeAI.py -t -a -o '
-        filename_base = file_path+'astar_'
+        filename_base = file_path+'survival_'
 
     elif core_id == 3:
         command = 'python ./src/snakeAI.py -t -w -o '
