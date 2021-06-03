@@ -68,20 +68,74 @@ for name in names:
 
 
 # %%
-
 # Here we create the main graphs, showing the evolution of the score in function of the 
 # number of moves.
 
-plt.figure(figsize=(13, 8))
+plt.figure(figsize=(13, 11))
 for name, color in zip(names, colors):
-    if name == 'sshaped':
-        continue
+
     for i in range(NUM_SAMPLES):
         plt.plot(big_dictionary[name][i][:, 0], big_dictionary[name][i][:, 1], color, linewidth=0.17)
     plt.plot(mean_dictionary[name][:, 0], mean_dictionary[name][:, 1], color, label=name, linewidth=1)
-plt.legend()
-plt.xlabel('Number of moves')
-plt.ylabel('Score')
-plt.title('Evolution of the score for \nthe different algorithms proposed', fontsize=18)
+plt.legend(prop={'size': 20})
+plt.xlabel('Number of moves', fontsize=14)
+plt.ylabel('Score', fontsize=14)
+plt.title('Evolution of the score for \nthe algorithms and their survival edition', fontsize=24)
+
+plt.savefig('thefigure2.png', bbox_inches='tight')
 plt.show()
 
+# %%
+### SPEED
+# Here the graphs for the "speed"
+
+plt.figure(figsize=(13, 11))
+for name, color in zip(names, colors):
+    plt.plot(mean_speed_dictionary[name][:-2, 0], mean_speed_dictionary[name][:-2, 1], color, label=name, linewidth=1)
+plt.legend(prop={'size': 20})
+plt.xlabel('Number of moves', fontsize=14)
+plt.ylabel('Speed', fontsize=14)
+plt.title('Evolution of the speed for \nthe algorithms and their survival edition', fontsize=24)
+
+plt.savefig('thespeed2.png', bbox_inches='tight')
+plt.show()
+
+# %%
+### VARIANCE
+# And here the graphs for the end mean and variance
+end_dictionary = {}
+
+for name in names:
+    end_dictionary[name] = {}
+    end_dictionary[name]['moves mean'] = np.mean([big_dictionary[name][i][-1, 0] for i in range(NUM_SAMPLES)])
+    end_dictionary[name]['score mean'] = np.mean([big_dictionary[name][i][-1, 1] for i in range(NUM_SAMPLES)])
+    end_dictionary[name]['moves var'] = np.var([big_dictionary[name][i][-1, 0] for i in range(NUM_SAMPLES)])
+    end_dictionary[name]['score var'] = np.var([big_dictionary[name][i][-1, 1] for i in range(NUM_SAMPLES)])
+
+plt.figure(figsize=(13, 11))
+ax = plt.gca()
+for name, color in zip(names, colors):
+    a = end_dictionary[name]['moves mean']
+    b = end_dictionary[name]['score mean']
+    mvar = end_dictionary[name]['moves var']
+    svar = end_dictionary[name]['score var']
+    ax.plot(a, b, color+'o', label=name, linewidth=5)
+    ax.add_patch(Ellipse((a, b), np.sqrt(mvar), np.sqrt(svar), edgecolor=color, fc='None', lw=2))
+ax.legend(prop={'size': 20})
+plt.xlabel('Number of moves', fontsize=14)
+plt.ylabel('Final score', fontsize=14)
+plt.title('Mean and variance of the final score for \nthe algorithms and their survival edition', fontsize=24)
+
+plt.savefig('thevar2.png', bbox_inches='tight')
+plt.show()
+
+# %%
+### TIME
+# Finally, here we store in a text file the computation times, already writing them
+# in a latex format for the report.
+
+with open('times2.txt', 'w') as file:
+    file.write('\\underline{\\textbf{Av. time per move}} & \\textbf{Time ($\\mus$)} \\\\\n')
+    for name in names:
+        file.write(name+'&'+str(mean_time_dictionary[name])+'\\\\\n')
+        
